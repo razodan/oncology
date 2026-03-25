@@ -2,10 +2,7 @@ import numpy as np
 import pandas as pd
 
 from glob import glob
-from PIL import Image
 
-import tensorflow as tf
-from tensorflow.keras import layers
 
 def prep_training_data():
     training_data = glob('data/Train/*/*.jpg')

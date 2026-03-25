@@ -21,4 +21,4 @@ def save_testing_image():
     plt.savefig('testing_data.png')
 
 # save_training_image()
-save_testing_image()
+# save_testing_image()
