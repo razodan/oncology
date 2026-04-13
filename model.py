@@ -5,6 +5,7 @@ from PIL import Image
 
 import tensorflow as tf
 from tensorflow.keras import layers
+from tensorflow.keras.callbacks import History
 from typing import Dict
 
 """
@@ -21,20 +22,50 @@ from typing import Dict
     Consider using SpareCategoricalCrossentropy
 """
 
-def encode_labels():
-    labels = pd.read_csv('training_data.csv')['label']
-    labels = {i: value for i, value in enumerate(set(labels))}
-    return labels
+X_train: tf.data.Dataset = tf.keras.utils.image_dataset_from_directory(
+    "data/Train",
+    labels="inferred",
+    label_mode="int",
+    image_size=(600,450),
+    batch_size=32
+)
 
-def load_training(labels: Dict[int,str]=None): # This isn't scalable or robust---consider another approach
-    paths = pd.read_csv('training_data.csv')['filepath']
-    train_X = tf.data.Dataset.from_tensor_slices((paths,labels))
-    return train_X
+X_test: tf.data.Dataset = tf.keras.utils.image_dataset_from_directory(
+    "data/Test",
+    labels="inferred",
+    label_mode="int",
+    image_size=(600,450),
+    batch_size=32,
+    shuffle=False
+)
 
-encoded_labels = encode_labels()
-train_X = load_training(encoded_labels)
+X_train_shape = None
+for images,_ in X_train.take(1):
+    X_train_shape = images.shape
 
-loss = tf.keras.losses.SparseCategoricalCrossentropy() # SCCE = -1 * ( \sum_{i=1}^{n} \log(\hat{y}_{i, y_i}) )
+model = tf.keras.Sequential([
+    layers.Input(shape=X_train_shape[1:]),
+    layers.Rescaling(1./255),
 
-train = loss(y_true=None,
-             y_pred=None)
+    layers.Conv2D(32,3,activation='relu'),
+    layers.MaxPooling2D(),
+    
+    layers.Conv2D(64,3,activation='relu'),
+    layers.MaxPooling2D(),
+    
+    layers.Flatten(),
+    layers.Dense(64,activation='relu'),
+    layers.Dense(9,activation='softmax')
+])
+
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy', # SCCE = -1 * ( \sum_{i=1}^{n} \log(\hat{y}_{i, y_i}) )
+    metrics=['accuracy']
+)
+
+history: History = model.fit(
+    X_train,
+    epochs=2,
+    batch_size=32
+)
